@@ -24,35 +24,21 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using QFramework;
-
-namespace QF.Res
+namespace QFramework
 {
     using System.Collections.Generic;
     using UnityEngine;
     
-    [MonoSingletonPath("[Framework]/ResMgr")]
+    [QMonoSingletonPath("[Framework]/ResMgr")]
     public class ResMgr : MonoSingleton<ResMgr>, IEnumeratorTaskMgr
     {
         #region ID:RKRM001 Init v0.1.0 Unity5.5.1p4
 
-        private static bool mResMgrInited = false;
         /// <summary>
         /// 初始化bin文件
         /// </summary>
         public static void Init()
         {
-            if (mResMgrInited) return;
-            mResMgrInited = true;
-            
-            SafeObjectPool<AssetBundleRes>.Instance.Init(40, 20);
-            SafeObjectPool<AssetRes>.Instance.Init(40, 20);
-            SafeObjectPool<ResourcesRes>.Instance.Init(40, 20);
-            SafeObjectPool<NetImageRes>.Instance.Init(40, 20);
-            SafeObjectPool<ResSearchRule>.Instance.Init(40, 20);            
-            SafeObjectPool<ResLoader>.Instance.Init(40, 20);
-
-            
             Instance.InitResMgr();
         }
 
@@ -79,7 +65,7 @@ namespace QF.Res
 		public void InitResMgr()
         {   
 #if UNITY_EDITOR
-            if (Res.SimulateAssetBundleInEditor)
+            if (AbstractRes.SimulateAssetBundleInEditor)
             {
                 EditorRuntimeAssetDataCollector.BuildDataTable();
             }
@@ -116,11 +102,38 @@ namespace QF.Res
             TryStartNextIEnumeratorTask();
         }
 
-
-        public IRes GetRes(ResSearchRule resSearchRule, bool createNew = false)
+        public IRes GetRes(string ownerBundleName, string assetName, bool createNew = false)
         {
             IRes res = null;
-            if (mResDictionary.TryGetValue(resSearchRule.DictionaryKey, out res))
+
+            if (mResDictionary.TryGetValue((ownerBundleName + assetName).ToLower(), out res))
+            {
+                return res;
+            }
+
+            if (!createNew)
+            {
+                return null;
+            }
+
+            res = ResFactory.Create(assetName, ownerBundleName);
+
+            if (res != null)
+            {
+                mResDictionary.Add((ownerBundleName + assetName).ToLower(), res);
+                
+                if (!mResList.Contains(res))
+                {
+                    mResList.Add(res);
+                }
+            }
+            return res;
+        }
+
+        public IRes GetRes(string assetName, bool createNew = false)
+        {
+            IRes res = null;
+            if (mResDictionary.TryGetValue(assetName, out res))
             {
                 return res;
             }
@@ -131,11 +144,11 @@ namespace QF.Res
                 return null;
             }
 
-            res = ResFactory.Create(resSearchRule);
+            res = ResFactory.Create(assetName);
 
             if (res != null)
             {
-                mResDictionary.Add(resSearchRule.DictionaryKey, res);
+                mResDictionary.Add(assetName, res);
                 if (!mResList.Contains(res))
                 {
                     mResList.Add(res);
@@ -200,26 +213,6 @@ namespace QF.Res
                         res.Recycle2Cache();
                     }
                 }
-            }
-        }
-
-        private void OnGUI()
-        {
-            if (Platform.IsEditor && Input.GetKey(KeyCode.F1))
-            {
-                GUILayout.BeginVertical("box");
-                
-                GUILayout.Label("ResKit", new GUIStyle {fontSize = 30});
-                GUILayout.Space(10);
-                GUILayout.Label("ResInfo", new GUIStyle {fontSize = 20});
-                mResList.ForEach(res => { GUILayout.Label((res as Res).ToString()); });
-                GUILayout.Space(10);
-
-                GUILayout.Label("Pools", new GUIStyle() {fontSize = 20});
-                GUILayout.Label(string.Format("ResSearchRule:{0}",
-                    SafeObjectPool<ResSearchRule>.Instance.CurCount));
-                GUILayout.Label(string.Format("ResLoader:{0}", SafeObjectPool<ResLoader>.Instance.CurCount));
-                GUILayout.EndVertical();
             }
         }
 

@@ -1,5 +1,5 @@
 ﻿/****************************************************************************
- * Copyright (c) 2017 ~ 2019.1 liangxie
+ * Copyright (c) 2017 ~ 2018.5 liangxie
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
@@ -23,15 +23,13 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using QF.Extensions;
-
-namespace QF.Res
+namespace QFramework
 {
 	using UnityEngine;
 	using UnityEditor;
 	using System.Collections.Generic;
 	using System.IO;
-
+	
 	public class AssetBundleInfo
 	{
 		public readonly string Name = "";
@@ -54,7 +52,7 @@ namespace QF.Res
 
 			BuildPipeline.BuildAssetBundles(outputPath, BuildAssetBundleOptions.ChunkBasedCompression, buildTarget);
 
-			GenerateVersionConfig();
+			GenerateVersionConfig(outputPath);
 
 			var finalDir = Application.streamingAssetsPath + "/AssetBundles/" + GetPlatformName();
 
@@ -62,36 +60,49 @@ namespace QF.Res
 			finalDir.CreateDirIfNotExists();
 
 			FileUtil.ReplaceDirectory(outputPath, finalDir);
-
+			
 			AssetBundleExporter.BuildDataTable();
 			AssetDatabase.Refresh();
 		}
 
-		private static void GenerateVersionConfig()
+		private static void GenerateVersionConfig(string outputPath)
 		{
-			if (ResKitEditorWindow.EnableGenerateClass)
+			var abManifestFile = Path.Combine(outputPath, GetPlatformName());
+			var ab = AssetBundle.LoadFromFile(abManifestFile);
+
+			var abMainfest = (AssetBundleManifest) ab.LoadAsset("AssetBundleManifest");
+			var allABNames = abMainfest.GetAllAssetBundles();
+			AssetBundleInfos.Clear();
+			
+			foreach (var abName in allABNames)
 			{
-				WriteClass();
+				var assetBundle = AssetBundle.LoadFromFile(Path.Combine(outputPath, abName));
+				var abInfo = new AssetBundleInfo(abName) {assets = assetBundle.GetAllAssetNames()};
+				AssetBundleInfos.Add(abInfo);
+				assetBundle.Unload(true);
 			}
-		}
 
-		public static void WriteClass()
-		{
-			"Assets/QFrameworkData".CreateDirIfNotExists();
+			ab.Unload(true);
 
-			var path = Path.GetFullPath(
-				Application.dataPath + Path.DirectorySeparatorChar + "QFrameworkData/QAssets.cs");
-			var writer = new StreamWriter(File.Open(path, FileMode.Create));
-			ResDataCodeGenerator.WriteClass(writer, "QAssetBundle");
-			writer.Close();
 			AssetDatabase.Refresh();
+
+			if (ResKitEditorWindow.isEnableGenerateClass)
+			{
+				"Assets/QFrameworkData".CreateDirIfNotExists();
+
+                var path = Path.GetFullPath(Application.dataPath + Path.DirectorySeparatorChar + "QFrameworkData/QAssets.cs");
+				var writer = new StreamWriter(File.Open(path, FileMode.Create));
+				ResKitInfoGenerator.WriteClass(writer, "QAssetBundle", AssetBundleInfos);
+				writer.Close();
+				AssetDatabase.Refresh();
+			}
 		}
 
 		private static readonly List<AssetBundleInfo> AssetBundleInfos = new List<AssetBundleInfo>();
 
 		private static string GetPlatformName()
 		{
-			return ResKitUtil.GetPlatformForAssetBundles(EditorUserBuildSettings.activeBuildTarget);
+			return PlatformUtil.GetPlatformForAssetBundles(EditorUserBuildSettings.activeBuildTarget);
 		}
 	}
 }

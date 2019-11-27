@@ -3,7 +3,7 @@
  * Copyright (c) 2017 liangxie
 ****************************************************************************/
 
-namespace QF.Res
+namespace QFramework
 {
 		
 	/// <summary>
@@ -11,6 +11,8 @@ namespace QF.Res
 	/// </summary>
 	public class AudioPlayer : IPoolType, IPoolable
 	{
+		ResLoader mResLoader = ResLoader.Allocate();
+
 		public bool IsRecycled { get; set; }
 
 		public void OnRecycled()

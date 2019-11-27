@@ -26,7 +26,7 @@
 using UnityEditor;
 using System.IO;
 
-namespace QF.Res
+namespace QFramework
 {
 	[InitializeOnLoad]
 	public class ResKitAssetsMenu

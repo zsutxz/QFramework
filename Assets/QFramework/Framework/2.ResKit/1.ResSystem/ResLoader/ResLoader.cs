@@ -1,5 +1,6 @@
 ﻿/****************************************************************************
- * Copyright (c) 2017 ~ 2019.1 liangxie
+ * Copyright (c) 2017 snowcold
+ * Copyright (c) 2017 ~ 2018.6 liangxie
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
@@ -23,88 +24,14 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using System.Runtime.InteropServices;
-using QF.Extensions;
-using UniRx;
-
-namespace QF.Res
+namespace QFramework
 {
     using System;
     using System.Collections.Generic;
     using UnityEngine;
     using Object = UnityEngine.Object;
-    
-    
-    public class ResSearchRule : IPoolable,IPoolType
-    {   
-        public string AssetName { get;private set; }
 
-        public string OwnerBundle { get; private set; }
-
-        public string TypeName { get; private set; }
-        
-        public string DictionaryKey { get; private set; }
-
-        public static ResSearchRule Allocate(string assetName,string ownerBundle = null,string typeName = null)
-        {
-            var resSearchRule = SafeObjectPool<ResSearchRule>.Instance.Allocate();
-                        
-            resSearchRule.AssetName = assetName;
-            resSearchRule.OwnerBundle = ownerBundle;
-            resSearchRule.TypeName = typeName;
-
-            if (resSearchRule.OwnerBundle.IsNull())
-            {
-                resSearchRule.DictionaryKey = assetName.ToLower();
-            }
-            else
-            {
-                resSearchRule.DictionaryKey = (ownerBundle + assetName).ToLower();
-            }
-            
-            return resSearchRule;
-        }
-        
-        public void Recycle2Cache()
-        {
-            SafeObjectPool<ResSearchRule>.Instance.Recycle(this);
-        }
-        
-        public bool Match(IRes res)
-        {
-            if (res.AssetName == AssetName)
-            {
-                if (OwnerBundle.IsNotNull())
-                {
-                    return res.OwnerBundleName == OwnerBundle;
-                }
-
-                return true;
-            }
-
-            return false;
-        }
-
-        public override string ToString()
-        {
-            return string.Format("AssetName:{0} BundleName:{1} TypeName:{2} Key:{3}", AssetName, OwnerBundle, TypeName,DictionaryKey);
-        }
-
-        void IPoolable.OnRecycled()
-        {
-            AssetName = null;
-
-            OwnerBundle = null;
-
-            TypeName = null;
-        }
-
-        bool IPoolable.IsRecycled { get; set; }
-
-
-    }
-
-    public class ResLoader : DisposableObject,IResLoader
+    public class ResLoader : DisposableObject, IResLoader, IPoolable, IPoolType
     {
         /// <summary>
         /// ID:RKRL001 申请ResLoader对象 ResLoader.Allocate（IResLoaderStrategy strategy = null)
@@ -135,10 +62,19 @@ namespace QF.Res
         /// <returns></returns>
         public T LoadSync<T>(string ownerBundle, string assetName) where T : Object
         {
-            var resSearchRule = ResSearchRule.Allocate(assetName, ownerBundle, typeof(T).ToString());
-            var retAsset = DoLoadSync(resSearchRule);
-            resSearchRule.Recycle2Cache();
-            return retAsset as T;
+            ownerBundle = ownerBundle.ToLower();
+            assetName = assetName.ToLower();
+            Add2Load(ownerBundle, assetName);
+            LoadSync();
+
+            var res = ResMgr.Instance.GetRes(ownerBundle, assetName);
+            if (res == null)
+            {
+                Log.E("Failed to Load Res:" + ownerBundle + assetName);
+                return null;
+            }
+
+            return res.Asset as T;
         }
 
         /// <summary>
@@ -159,24 +95,16 @@ namespace QF.Res
         /// <returns></returns>
         public Object LoadSync(string name)
         {
-            var resSearchRule = ResSearchRule.Allocate(name);
-            var retAsset = DoLoadSync(resSearchRule);
-            resSearchRule.Recycle2Cache();
-            return retAsset;
-        }
-
-        private Object DoLoadSync(ResSearchRule resSearchRule)
-        {
-            Add2Load(resSearchRule);
+            Add2Load(name);
             LoadSync();
 
-            var res = ResMgr.Instance.GetRes(resSearchRule, false);
+            var res = ResMgr.Instance.GetRes(name, false);
             if (res == null)
-            {                
-                Log.E("Failed to Load Res:" + resSearchRule);                
+            {
+                Log.E("Failed to Load Res:" + name);
                 return null;
             }
-            
+
             return res.Asset;
         }
 
@@ -232,7 +160,7 @@ namespace QF.Res
 
         private int  mLoadingCount;
 
-        private        LinkedList<CallBackWrap> mCallbackRecordList;
+        private        LinkedList<CallBackWrap> mCallbackRecardList;
         private static DefaultLoaderStrategy    sDefaultStrategy;
 
         public static IResLoaderStrategy defaultStrategy
@@ -272,6 +200,9 @@ namespace QF.Res
             }
         }
 
+        public bool IsRecycled { get; set; }
+
+
         public ResLoader()
         {
             SetStrategy(sDefaultStrategy);
@@ -286,44 +217,32 @@ namespace QF.Res
 
             for (var i = list.Count - 1; i >= 0; --i)
             {
-                var resSearchRule = ResSearchRule.Allocate(list[i]);
-                Add2Load(resSearchRule);
-                resSearchRule.Recycle2Cache();
+                Add2Load(list[i]);
             }
-        }
-
-        public void Add2Load(string assetName, Action<bool, IRes> listener = null,
-            bool lastOrder = true)
-        {
-            var searchRule = ResSearchRule.Allocate(assetName);
-            Add2Load(searchRule,listener,lastOrder);
-            searchRule.Recycle2Cache();
         }
 
         public void Add2Load(string ownerBundle, string assetName, Action<bool, IRes> listener = null,
             bool lastOrder = true)
         {
-            var searchRule = ResSearchRule.Allocate(assetName, ownerBundle);
-            Add2Load(searchRule, listener, lastOrder);
-            searchRule.Recycle2Cache();
-        }
+            if (string.IsNullOrEmpty(ownerBundle) || string.IsNullOrEmpty(assetName))
+            {
+                Log.E("Res Name Or Bundle Name Is Null.");
+                return;
+            }
 
-        private void Add2Load(ResSearchRule resSearchRule, Action<bool, IRes> listener = null,
-            bool lastOrder = true)
-        {
-            var res = FindResInArray(mResList, resSearchRule);
+            var res = FindResInArray(mResList, ownerBundle, assetName);
             if (res != null)
             {
                 if (listener != null)
                 {
-                    AddResListenerRecord(res, listener);
+                    AddResListenerReward(res, listener);
                     res.RegisteResListener(listener);
                 }
 
                 return;
             }
 
-            res = ResMgr.Instance.GetRes(resSearchRule, true);
+            res = ResMgr.Instance.GetRes(ownerBundle, assetName, true);
 
             if (res == null)
             {
@@ -332,7 +251,7 @@ namespace QF.Res
 
             if (listener != null)
             {
-                AddResListenerRecord(res, listener);
+                AddResListenerReward(res, listener);
                 res.RegisteResListener(listener);
             }
 
@@ -343,9 +262,55 @@ namespace QF.Res
             {
                 foreach (var depend in depends)
                 {
-                    var searchRule = ResSearchRule.Allocate(depend);
-                    Add2Load(searchRule);
-                    searchRule.Recycle2Cache();
+                    Add2Load(depend);
+                }
+            }
+
+            AddRes2Array(res, lastOrder);
+        }
+
+
+        public void Add2Load(string resName, Action<bool, IRes> listener = null, bool lastOrder = true)
+        {
+            if (string.IsNullOrEmpty(resName))
+            {
+                Log.E("Res Name Is Null.");
+                return;
+            }
+
+            var res = FindResInArray(mResList, resName);
+            if (res != null)
+            {
+                if (listener != null)
+                {
+                    AddResListenerReward(res, listener);
+                    res.RegisteResListener(listener);
+                }
+
+                return;
+            }
+
+            res = ResMgr.Instance.GetRes(resName, true);
+
+            if (res == null)
+            {
+                return;
+            }
+
+            if (listener != null)
+            {
+                AddResListenerReward(res, listener);
+                res.RegisteResListener(listener);
+            }
+
+            //无论该资源是否加载完成，都需要添加对该资源依赖的引用
+            var depends = res.GetDependResList();
+
+            if (depends != null)
+            {
+                foreach (var depend in depends)
+                {
+                    Add2Load(depend);
                 }
             }
 
@@ -360,7 +325,7 @@ namespace QF.Res
         public Sprite LoadSprite(string bundleName, string spriteName)
         {
 #if UNITY_EDITOR
-            if (Res.SimulateAssetBundleInEditor)
+            if (AbstractRes.SimulateAssetBundleInEditor)
             {
                 if (mCachedSpriteDict.ContainsKey(spriteName))
                 {
@@ -382,7 +347,7 @@ namespace QF.Res
         public Sprite LoadSprite(string spriteName)
         {
 #if UNITY_EDITOR
-            if (Res.SimulateAssetBundleInEditor)
+            if (AbstractRes.SimulateAssetBundleInEditor)
             {
                 if (mCachedSpriteDict.ContainsKey(spriteName))
                 {
@@ -409,14 +374,13 @@ namespace QF.Res
 
         public void ReleaseRes(string resName)
         {
-            
             if (string.IsNullOrEmpty(resName))
             {
                 return;
             }
 
 #if UNITY_EDITOR
-            if (Res.SimulateAssetBundleInEditor)
+            if (AbstractRes.SimulateAssetBundleInEditor)
             {
                 if (mCachedSpriteDict.ContainsKey(resName))
                 {
@@ -426,11 +390,8 @@ namespace QF.Res
                 }
             }
 #endif
-            var resSearchRule = ResSearchRule.Allocate(resName);
 
-            var res = ResMgr.Instance.GetRes(resSearchRule);
-            resSearchRule.Recycle2Cache();
-            
+            var res = ResMgr.Instance.GetRes(resName);
             if (res == null)
             {
                 return;
@@ -469,7 +430,7 @@ namespace QF.Res
         public void ReleaseAllRes()
         {
 #if UNITY_EDITOR
-            if (Res.SimulateAssetBundleInEditor)
+            if (AbstractRes.SimulateAssetBundleInEditor)
             {
                 foreach (var spritePair in mCachedSpriteDict)
                 {
@@ -502,7 +463,7 @@ namespace QF.Res
             RemoveAllCallbacks(true);
         }
 
-        public void UnloadAllInstantiateRes(bool flag)
+        public void UnloadAllInstantialteRes(bool flag)
         {
             if (mResList.Count > 0)
             {
@@ -586,9 +547,9 @@ namespace QF.Res
 
         private void RemoveCallback(IRes res, bool release)
         {
-            if (mCallbackRecordList != null)
+            if (mCallbackRecardList != null)
             {
-                var current = mCallbackRecordList.First;
+                var current = mCallbackRecardList.First;
                 LinkedListNode<CallBackWrap> next = null;
                 while (current != null)
                 {
@@ -600,7 +561,7 @@ namespace QF.Res
                             current.Value.Release();
                         }
 
-                        mCallbackRecordList.Remove(current);
+                        mCallbackRecardList.Remove(current);
                     }
 
                     current = next;
@@ -610,18 +571,18 @@ namespace QF.Res
 
         private void RemoveAllCallbacks(bool release)
         {
-            if (mCallbackRecordList != null)
+            if (mCallbackRecardList != null)
             {
-                var count = mCallbackRecordList.Count;
+                var count = mCallbackRecardList.Count;
                 while (count > 0)
                 {
                     --count;
                     if (release)
                     {
-                        mCallbackRecordList.Last.Value.Release();
+                        mCallbackRecardList.Last.Value.Release();
                     }
 
-                    mCallbackRecordList.RemoveLast();
+                    mCallbackRecardList.RemoveLast();
                 }
             }
         }
@@ -636,7 +597,13 @@ namespace QF.Res
             {
                 RemoveAllCallbacks(false);
 
-                mListener.InvokeGracefully();
+                //ResMgr.Instance.timeDebugger.End();
+                //ResMgr.Instance.timeDebugger.Dump(-1);
+                if (mListener != null)
+                {
+                    mListener();
+                    mListener = null;
+                }
 
                 mStrategy.OnAllTaskFinish(this);
             }
@@ -644,11 +611,8 @@ namespace QF.Res
 
         private void AddRes2Array(IRes res, bool lastOrder)
         {
-            var searchRule = ResSearchRule.Allocate(res.AssetName);
             //再次确保队列中没有它
-            var oldRes = FindResInArray(mResList, searchRule);
-            
-            searchRule.Recycle2Cache();
+            var oldRes = FindResInArray(mResList, res.AssetName);
 
             if (oldRes != null)
             {
@@ -672,7 +636,7 @@ namespace QF.Res
             }
         }
 
-        private static IRes FindResInArray(List<IRes> list, ResSearchRule resSearchRule)
+        private static IRes FindResInArray(List<IRes> list, string ownerBundleName, string assetName)
         {
             if (list == null)
             {
@@ -681,7 +645,7 @@ namespace QF.Res
 
             for (var i = list.Count - 1; i >= 0; --i)
             {
-                if (resSearchRule.Match(list[i]))
+                if (list[i].AssetName.Equals(assetName) && list[i].OwnerBundleName == ownerBundleName)
                 {
                     return list[i];
                 }
@@ -690,17 +654,34 @@ namespace QF.Res
             return null;
         }
 
-        private void AddResListenerRecord(IRes res, Action<bool, IRes> listener)
+
+        private static IRes FindResInArray(List<IRes> list, string name)
         {
-            if (mCallbackRecordList == null)
+            if (list == null)
             {
-                mCallbackRecordList = new LinkedList<CallBackWrap>();
+                return null;
             }
 
-            mCallbackRecordList.AddLast(new CallBackWrap(res, listener));
+            for (var i = list.Count - 1; i >= 0; --i)
+            {
+                if (list[i].AssetName.Equals(name))
+                {
+                    return list[i];
+                }
+            }
+
+            return null;
         }
 
-        bool IPoolable.IsRecycled { get; set; }
+        private void AddResListenerReward(IRes res, Action<bool, IRes> listener)
+        {
+            if (mCallbackRecardList == null)
+            {
+                mCallbackRecardList = new LinkedList<CallBackWrap>();
+            }
+
+            mCallbackRecardList.AddLast(new CallBackWrap(res, listener));
+        }
 
         void IPoolable.OnRecycled()
         {

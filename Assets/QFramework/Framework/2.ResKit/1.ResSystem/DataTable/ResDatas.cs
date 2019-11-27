@@ -25,17 +25,12 @@
 
 using System;
 using System.Collections.Generic;
-using QFramework;
+using UnityEngine;
 
-namespace QF.Res
+namespace QFramework
 {
     public class ResDatas : Singleton<ResDatas>
     {
-        public IList<AssetDataGroup> AllAssetDataGroups
-        {
-            get { return mAllAssetDataGroup; }
-        }
-
         [Serializable]
         public class SerializeData
         {
@@ -48,26 +43,26 @@ namespace QF.Res
             }
         }
 
-        private readonly List<AssetDataGroup> mActiveAssetDataGroup = new List<AssetDataGroup>();
-        private readonly List<AssetDataGroup> mAllAssetDataGroup = new List<AssetDataGroup>();
+        private List<AssetDataGroup> m_ActiveAssetDataGroup = new List<AssetDataGroup>();
+        private List<AssetDataGroup> m_AllAssetDataGroup = new List<AssetDataGroup>();
 
         public void SwitchLanguage(string key)
         {
-            mActiveAssetDataGroup.Clear();
+            m_ActiveAssetDataGroup.Clear();
 
             var languageKey = string.Format("[{0}]", key);
 
-            for (var i = mAllAssetDataGroup.Count - 1; i >= 0; --i)
+            for (var i = m_AllAssetDataGroup.Count - 1; i >= 0; --i)
             {
-                var group = mAllAssetDataGroup[i];
+                var group = m_AllAssetDataGroup[i];
 
                 if (!group.key.Contains("i18res"))
                 {
-                    mActiveAssetDataGroup.Add(group);
+                    m_ActiveAssetDataGroup.Add(group);
                 }
                 else if (group.key.Contains(languageKey))
                 {
-                    mActiveAssetDataGroup.Add(group);
+                    m_ActiveAssetDataGroup.Add(group);
                 }
 
             }
@@ -76,11 +71,6 @@ namespace QF.Res
 
         public static ResDatas Create()
         {
-            if (Instance != null)
-            {
-                Instance.Dispose();
-            }
-            
             return Instance;
         }
         
@@ -88,13 +78,13 @@ namespace QF.Res
 
         public void Reset()
         {
-            for (int i = mAllAssetDataGroup.Count - 1; i >= 0; --i)
+            for (int i = m_AllAssetDataGroup.Count - 1; i >= 0; --i)
             {
-                mAllAssetDataGroup[i].Reset();
+                m_AllAssetDataGroup[i].Reset();
             }
 
-            mAllAssetDataGroup.Clear();
-            mActiveAssetDataGroup.Clear();
+            m_AllAssetDataGroup.Clear();
+            m_ActiveAssetDataGroup.Clear();
         }
 
         public int AddAssetBundleName(string name, string[] depends, out AssetDataGroup group)
@@ -119,7 +109,7 @@ namespace QF.Res
             {
                 group = new AssetDataGroup(key);
                 Log.I("#Create Config Group:" + key);
-                mAllAssetDataGroup.Add(group);
+                m_AllAssetDataGroup.Add(group);
             }
 
             return group.AddAssetBundleName(name, depends);
@@ -127,10 +117,10 @@ namespace QF.Res
 
         public string GetAssetBundleName(string assetName, int index,string onwerBundleName)
         {
-            for (var i = mActiveAssetDataGroup.Count - 1; i >= 0; --i)
+            for (var i = m_ActiveAssetDataGroup.Count - 1; i >= 0; --i)
             {
                 string result;
-                if (!mActiveAssetDataGroup[i].GetAssetBundleName(assetName, index, out result))
+                if (!m_ActiveAssetDataGroup[i].GetAssetBundleName(assetName, index, out result))
                 {
                     continue;
                 }
@@ -148,12 +138,13 @@ namespace QF.Res
 
         public string[] GetAllDependenciesByUrl(string url)
         {
-			var abName = ResKitUtil.AssetBundleUrl2Name(url);
+			var abName = FrameworkSettingData.AssetBundleUrl2Name(url);
+            //var a = new AssetBundleManifest();
             
-            for (var i = mActiveAssetDataGroup.Count - 1; i >= 0; --i)
+            for (var i = m_ActiveAssetDataGroup.Count - 1; i >= 0; --i)
             {
                 string[] depends;
-                if (!mActiveAssetDataGroup[i].GetAssetBundleDepends(abName, out depends))
+                if (!m_ActiveAssetDataGroup[i].GetAssetBundleDepends(abName, out depends))
                 {
                     continue;
                 }
@@ -164,19 +155,33 @@ namespace QF.Res
             return null;
         }
         
-
-        public AssetData GetAssetData(ResSearchRule resSearchRule)
+        public AssetData GetAssetData(string assetName)
         {
-            for (var i = mActiveAssetDataGroup.Count - 1; i >= 0; --i)
+            for (int i = m_ActiveAssetDataGroup.Count - 1; i >= 0; --i)
             {
-                var result = mActiveAssetDataGroup[i].GetAssetData(resSearchRule);
+                AssetData result = m_ActiveAssetDataGroup[i].GetAssetData(assetName);
                 if (result == null)
                 {
                     continue;
                 }
                 return result;
             }
+            //Log.W(string.Format("Not Find Asset : {0}", assetName));
+            return null;
+        }
 
+        public AssetData GetAssetData(string assetName,string ownerBundle)
+        {
+            for (var i = m_ActiveAssetDataGroup.Count - 1; i >= 0; --i)
+            {
+                var result = m_ActiveAssetDataGroup[i].GetAssetData(assetName,ownerBundle);
+                if (result == null)
+                {
+                    continue;
+                }
+                return result;
+            }
+            //Log.W(string.Format("Not Find Asset : {0}", assetName));
             return null;
         }
 
@@ -204,14 +209,13 @@ namespace QF.Res
 
         public void Save(string outPath)
         {
-            SerializeData sd = new SerializeData
-            {
-                AssetDataGroup = new AssetDataGroup.SerializeData[mAllAssetDataGroup.Count]
-            };
+            SerializeData sd = new SerializeData();
 
-            for (var i = 0; i < mAllAssetDataGroup.Count; ++i)
+            sd.AssetDataGroup = new AssetDataGroup.SerializeData[m_AllAssetDataGroup.Count];
+
+            for (int i = 0; i < m_AllAssetDataGroup.Count; ++i)
             {
-                sd.AssetDataGroup[i] = mAllAssetDataGroup[i].GetSerializeData();
+                sd.AssetDataGroup[i] = m_AllAssetDataGroup[i].GetSerializeData();
             }
 
             if (SerializeHelper.SerializeBinary(outPath, sd))
@@ -233,7 +237,7 @@ namespace QF.Res
 
             for (int i = data.AssetDataGroup.Length - 1; i >= 0; --i)
             {
-                mAllAssetDataGroup.Add(BuildAssetDataGroup(data.AssetDataGroup[i]));
+                m_AllAssetDataGroup.Add(BuildAssetDataGroup(data.AssetDataGroup[i]));
             }
         }
 
@@ -244,11 +248,11 @@ namespace QF.Res
 
         private AssetDataGroup GetAssetDataGroup(string key)
         {
-            for (int i = mAllAssetDataGroup.Count - 1; i >= 0; --i)
+            for (int i = m_AllAssetDataGroup.Count - 1; i >= 0; --i)
             {
-                if (mAllAssetDataGroup[i].key.Equals(key))
+                if (m_AllAssetDataGroup[i].key.Equals(key))
                 {
-                    return mAllAssetDataGroup[i];
+                    return m_AllAssetDataGroup[i];
                 }
             }
 

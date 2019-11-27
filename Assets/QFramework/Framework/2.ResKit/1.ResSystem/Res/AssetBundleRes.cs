@@ -24,14 +24,12 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using QF.Extensions;
-
-namespace QF.Res
+namespace QFramework
 {
     using UnityEngine;
     using System.Collections;
 
-    public class AssetBundleRes : Res
+    public class AssetBundleRes : AbstractRes
     {
         private bool                     mUnloadFlag = true;
         private string[]                 mDependResList;
@@ -86,7 +84,7 @@ namespace QF.Res
             else
 #endif
             {
-                var url = ResKitUtil.AssetBundleName2Url(mAssetName);
+                var url = FrameworkSettingData.AssetBundleName2Url(mAssetName);
                 var bundle = AssetBundle.LoadFromFile(url);
 
                 mUnloadFlag = true;
@@ -136,7 +134,7 @@ namespace QF.Res
             else
 #endif
             {
-                var url = ResKitUtil.AssetBundleName2Url(mAssetName);
+                var url = FrameworkSettingData.AssetBundleName2Url(mAssetName);
                 var abcR = AssetBundle.LoadFromFileAsync(url);
 
                 mAssetBundleCreateRequest = abcR;
@@ -202,11 +200,6 @@ namespace QF.Res
                 AssetBundle.Unload(mUnloadFlag);
                 AssetBundle = null;
             }
-        }
-
-        public override string ToString()
-        {
-            return "Type:AssetBundle\t {0}".FillFormat(base.ToString());
         }
     }
 }

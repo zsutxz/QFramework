@@ -4,6 +4,8 @@
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
+ * https://github.com/liangxiegame/QSingleton
+ * https://github.com/liangxiegame/QChain
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +26,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QF.Res
+namespace QFramework
 {
         
     public class DefaultLoaderStrategy : IResLoaderStrategy
@@ -44,7 +46,7 @@ namespace QF.Res
 
         }
 
-        public void OnAsyncLoadFinish(IResLoader loader, ResourcesRes res)
+        public void OnAsyncLoadFinish(IResLoader loader, InternalRes res)
         {
 
         }
@@ -54,7 +56,7 @@ namespace QF.Res
 
         }
 
-        public void OnSyncLoadFinish(IResLoader loader, ResourcesRes res)
+        public void OnSyncLoadFinish(IResLoader loader, InternalRes res)
         {
 
         }

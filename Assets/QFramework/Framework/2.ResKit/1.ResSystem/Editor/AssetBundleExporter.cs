@@ -28,10 +28,8 @@ using UnityEditor;
 
 using System.Collections.Generic;
 using System.IO;
-using QF.Extensions;
-using QFramework;
 
-namespace QF.Res
+namespace QFramework
 {
     public static class AssetBundleExporter
     {
@@ -43,8 +41,8 @@ namespace QF.Res
 			ProcessAssetBundleRes(table);
 
 		    var filePath =
-		        (FilePath.StreamingAssetsPath + ResKitUtil.RELATIVE_AB_ROOT_FOLDER).CreateDirIfNotExists() +
-		        ResKitUtil.EXPORT_ASSETBUNDLE_CONFIG_FILENAME;
+		        (FilePath.StreamingAssetsPath + FrameworkSettingData.RELATIVE_AB_ROOT_FOLDER).CreateDirIfNotExists() +
+		        FrameworkSettingData.EXPORT_ASSETBUNDLE_CONFIG_FILENAME;
 			table.Save(filePath);
 			AssetDatabase.Refresh ();
 		}
@@ -99,8 +97,8 @@ namespace QF.Res
             }
 
             abb.assetNames = fileNameList.ToArray();
-			BuildPipeline.BuildAssetBundles(ResKitUtil.EDITOR_AB_EXPORT_ROOT_FOLDER,
-                new[] { abb },
+			BuildPipeline.BuildAssetBundles(FrameworkSettingData.EDITOR_AB_EXPORT_ROOT_FOLDER,
+                new AssetBundleBuild[1] { abb },
                 BuildAssetBundleOptions.ChunkBasedCompression,
                 BuildTarget.StandaloneWindows);
         }
@@ -126,6 +124,7 @@ namespace QF.Res
         private static void ProcessAssetBundleRes(ResDatas table)
         {
             AssetDataGroup group = null;
+
 
             AssetDatabase.RemoveUnusedAssetBundleNames();
 

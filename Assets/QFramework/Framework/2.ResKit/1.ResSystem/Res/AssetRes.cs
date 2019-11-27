@@ -4,6 +4,8 @@
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
+ * https://github.com/liangxiegame/QSingleton
+ * https://github.com/liangxiegame/QChain
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,14 +26,12 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using QF.Extensions;
-
-namespace QF.Res
+namespace QFramework
 {
 	using UnityEngine;
 	using System.Collections;
 
-	public class AssetRes : Res
+	public class AssetRes : BaseRes
 	{
 		protected string[]           mAssetBundleArray;
 		protected AssetBundleRequest mAssetBundleRequest;
@@ -168,7 +168,7 @@ namespace QF.Res
 			}
 
 			
-            //Object obj = null;
+			Object obj = null;
 
 			var abR = ResMgr.Instance.GetRes<AssetBundleRes>(AssetBundleName);
 
@@ -262,9 +262,9 @@ namespace QF.Res
 		{
 			mAssetBundleArray = null;
 
-			var resSearchRule = ResSearchRule.Allocate(mAssetName, mOwnerBundleName);
-			var config = ResDatas.Instance.GetAssetData(resSearchRule);
-			resSearchRule.Recycle2Cache();
+			AssetData config = mOwnerBundleName != null
+				? ResDatas.Instance.GetAssetData(mAssetName, mOwnerBundleName)
+				: ResDatas.Instance.GetAssetData(mAssetName);
 
 			if (config == null)
 			{
@@ -277,17 +277,12 @@ namespace QF.Res
 
 			if (string.IsNullOrEmpty(assetBundleName))
 			{
-				Log.E("Not Find AssetBundle In Config:" + config.AssetBundleIndex + mOwnerBundleName);
+				Log.E("Not Find AssetBundle In Config:" + config.AssetBundleIndex);
 				return;
 			}
 
 			mAssetBundleArray = new string[1];
 			mAssetBundleArray[0] = assetBundleName;
-		}
-
-		public override string ToString()
-		{
-			return "Type:Asset\t {0}\t FromAssetBundle:{1}".FillFormat(base.ToString(), AssetBundleName);
 		}
 	}
 }

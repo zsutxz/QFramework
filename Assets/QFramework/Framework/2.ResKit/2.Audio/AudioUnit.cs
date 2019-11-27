@@ -2,9 +2,7 @@
  * Copyright (c) 2017 liangxie
 ****************************************************************************/
 
-using QFramework;
-
-namespace QF.Res
+namespace QFramework
 {
     using System;
     using UnityEngine;
@@ -124,7 +122,7 @@ namespace QF.Res
             //暂停
             if (mTimeItem != null)
             {
-                mLeftDelayTime = mTimeItem.SortScore - QFramework.Timer.Instance.currentScaleTime;
+                mLeftDelayTime = mTimeItem.SortScore - Timer.Instance.currentScaleTime;
                 mTimeItem.Cancel();
                 mTimeItem = null;
             }
@@ -143,7 +141,7 @@ namespace QF.Res
 
             if (mLeftDelayTime >= 0)
             {
-                mTimeItem = QFramework.Timer.Instance.Post2Scale(OnResumeTimeTick, mLeftDelayTime);
+                mTimeItem = Timer.Instance.Post2Scale(OnResumeTimeTick, mLeftDelayTime);
             }
 
             mIsPause = false;
@@ -197,7 +195,7 @@ namespace QF.Res
                 loopCount = -1;
             }
 
-            mTimeItem = QFramework.Timer.Instance.Post2Scale(OnSoundPlayFinish, mAudioClip.length, loopCount);
+            mTimeItem = Timer.Instance.Post2Scale(OnSoundPlayFinish, mAudioClip.length, loopCount);
 
 
             if (null != mOnStartListener)
@@ -214,7 +212,7 @@ namespace QF.Res
 
             if (mIsLoop)
             {
-                mTimeItem = QFramework.Timer.Instance.Post2Scale(OnSoundPlayFinish, mAudioClip.length, -1);
+                mTimeItem = Timer.Instance.Post2Scale(OnSoundPlayFinish, mAudioClip.length, -1);
             }
         }
 

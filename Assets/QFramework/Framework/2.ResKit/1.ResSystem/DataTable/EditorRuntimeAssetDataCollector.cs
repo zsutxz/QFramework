@@ -27,7 +27,7 @@
 using UnityEditor;
 
 
-namespace QF.Res
+namespace QFramework
 {
     public static class EditorRuntimeAssetDataCollector
     {

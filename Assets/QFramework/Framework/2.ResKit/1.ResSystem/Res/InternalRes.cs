@@ -1,6 +1,6 @@
 ﻿/****************************************************************************
  * Copyright (c) 2017 snowcold
- * Copyright (c) 2017 ~ 2018.7 liangxie
+ * Copyright (c) 2017 ~ 2018.5 liangxie
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
@@ -24,41 +24,28 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QF.Res
+namespace QFramework
 {
     using UnityEngine;
     using System.Collections;
-    using Extensions;
-
-    public enum InternalResNamePrefixType
-    {
-        Url, // resources://
-        Folder, // Resources/
-    }
     
-    public class ResourcesRes : Res
-    { 
+    public class InternalRes : BaseRes
+    {
         private ResourceRequest mResourceRequest;
 
-        private string mPath;
-        
-        public static ResourcesRes Allocate(string name,InternalResNamePrefixType prefixType)
+        public static InternalRes Allocate(string name)
         {
-            var res = SafeObjectPool<ResourcesRes>.Instance.Allocate();
+            var res = SafeObjectPool<InternalRes>.Instance.Allocate();
             if (res != null)
             {
                 res.AssetName = name;
             }
-
-            if (prefixType == InternalResNamePrefixType.Url)
-            {
-                res.mPath = name.Substring("resources://".Length);
-            }
-            else
-            {
-                res.mPath = name.Substring("Resources/".Length);
-            }
             return res;
+        }
+
+        private static string Name2Path(string name)
+        {
+            return name.Substring(10);
         }
 
         public override void AcceptLoaderStrategySync(IResLoader loader, IResLoaderStrategy strategy)
@@ -85,11 +72,11 @@ namespace QF.Res
 
             State = ResState.Loading;
 
-            mAsset = Resources.Load(mPath);
+            mAsset = Resources.Load(Name2Path(mAssetName));
 
             if (mAsset == null)
             {
-                Log.E("Failed to Load Asset From Resources:" + mPath);
+                Log.E("Failed to Load Asset From Resources:" + Name2Path(mAssetName));
                 OnResLoadFaild();
                 return false;
             }
@@ -124,7 +111,7 @@ namespace QF.Res
                 yield break;
             }
 
-            var resourceRequest = Resources.LoadAsync(mPath);
+            var resourceRequest = Resources.LoadAsync(Name2Path(mAssetName));
 
             mResourceRequest = resourceRequest;
             yield return resourceRequest;
@@ -147,7 +134,7 @@ namespace QF.Res
 
         public override void Recycle2Cache()
         {
-            SafeObjectPool<ResourcesRes>.Instance.Recycle(this);
+            SafeObjectPool<InternalRes>.Instance.Recycle(this);
         }
 
         protected override float CalculateProgress()
@@ -158,11 +145,6 @@ namespace QF.Res
             }
 
             return mResourceRequest.progress;
-        }
-
-        public override string ToString()
-        {
-            return "Type:Resources {1}".FillFormat(AssetName, base.ToString());
         }
     }
 }

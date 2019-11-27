@@ -1,9 +1,11 @@
 ﻿/****************************************************************************
  * Copyright (c) 2017 snowcold
- * Copyright (c) 2017 ~ 2018.7 liangxie
+ * Copyright (c) 2017 liangxie
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
+ * https://github.com/liangxiegame/QSingleton
+ * https://github.com/liangxiegame/QChain
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +26,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using QFramework;
-
-namespace QF.Res
+namespace QFramework
 {
     using System;
     using UnityEngine;
@@ -40,7 +40,7 @@ namespace QF.Res
         }
     }
     
-    public class NetImageRes : Res, IDownloadTask
+    public class NetImageRes : AbstractRes, IDownloadTask
     {
         private string mUrl;
         private string mHashCode;

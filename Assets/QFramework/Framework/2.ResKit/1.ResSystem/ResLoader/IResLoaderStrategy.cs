@@ -4,6 +4,8 @@
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
+ * https://github.com/liangxiegame/QSingleton
+ * https://github.com/liangxiegame/QChain
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +26,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QF.Res
+namespace QFramework
 {
     //资源加载&释放策略
     public interface IResLoaderStrategy
@@ -33,12 +35,12 @@ namespace QF.Res
         void OnSyncLoadFinish(IResLoader loader, IRes res);
         void OnSyncLoadFinish(IResLoader loader, AssetBundleRes res);
         void OnSyncLoadFinish(IResLoader loader, AssetRes res);
-        void OnSyncLoadFinish(IResLoader loader, ResourcesRes res);
+        void OnSyncLoadFinish(IResLoader loader, InternalRes res);
 
         void OnAsyncLoadFinish(IResLoader loader, IRes res);
         void OnAsyncLoadFinish(IResLoader loader, AssetBundleRes res);
         void OnAsyncLoadFinish(IResLoader loader, AssetRes res);
-        void OnAsyncLoadFinish(IResLoader loader, ResourcesRes res);
+        void OnAsyncLoadFinish(IResLoader loader, InternalRes res);
     }
 
     public class AbstractResLoaderStrategy : IResLoaderStrategy
@@ -63,7 +65,7 @@ namespace QF.Res
 
         }
 
-        public virtual void OnSyncLoadFinish(IResLoader loader, ResourcesRes res)
+        public virtual void OnSyncLoadFinish(IResLoader loader, InternalRes res)
         {
 
         }
@@ -83,7 +85,7 @@ namespace QF.Res
 
         }
 
-        public virtual void OnAsyncLoadFinish(IResLoader loader, ResourcesRes res)
+        public virtual void OnAsyncLoadFinish(IResLoader loader, InternalRes res)
         {
 
         }

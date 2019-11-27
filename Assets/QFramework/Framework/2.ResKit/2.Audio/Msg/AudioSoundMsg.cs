@@ -2,16 +2,13 @@
  * Copyright (c) 2017 liangxie
 ****************************************************************************/
 
-using QFramework;
-
-namespace QF.Res
+namespace QFramework
 {
 	using System;
 	
 	public class AudioSoundMsg : QMsg
 	{
 		public string SoundName;
-		public float Volume = 1.0f;
 		public System.Action onSoundBeganCallback;
 		public System.Action onSoundEndedCallback;
 

@@ -3,6 +3,8 @@
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
+ * https://github.com/liangxiegame/QSingleton
+ * https://github.com/liangxiegame/QChain
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +33,7 @@ namespace QFramework
 	{
 		public static Camera UICamera
 		{
-			get { return UIManager.Instance.UICamera; }
+			get { return QUIManager.Instance.UICamera; }
 		}
 		
 		public static void SetPerspectiveMode()

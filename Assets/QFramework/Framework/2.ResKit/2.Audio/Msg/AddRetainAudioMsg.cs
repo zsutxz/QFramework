@@ -2,9 +2,7 @@
  * Copyright (c) 2017 liangxie
 ****************************************************************************/
 
-using QFramework;
-
-namespace QF.Res
+namespace QFramework
 {
 	using System.Collections;
 	using System.Collections.Generic;

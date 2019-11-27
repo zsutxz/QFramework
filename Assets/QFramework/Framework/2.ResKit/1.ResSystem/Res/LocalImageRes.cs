@@ -3,6 +3,8 @@
  * 
  * http://qframework.io
  * https://github.com/liangxiegame/QFramework
+ * https://github.com/liangxiegame/QSingleton
+ * https://github.com/liangxiegame/QChain
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +25,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-using QFramework;
-
-namespace QF.Res
+namespace QFramework
 {
     using System;
     using UnityEngine;
@@ -43,12 +43,12 @@ namespace QF.Res
     /// <summary>
     /// 本地图片加载器
     /// </summary>
-    public class LocalImageRes : Res, IDownloadTask
+    public class LocalImageRes : AbstractRes, IDownloadTask
     {
         private string mFullPath;
         private string mHashCode;
         private object mRawAsset;
-        private WWW mWWW = null;
+        private WWW mWWW;
 
         public static LocalImageRes Allocate(string name)
         {
@@ -187,67 +187,74 @@ namespace QF.Res
             }
 
             ResMgr.Instance.PushIEnumeratorTask(this);
+            //ResMgr.S.PostLoadTask(LoadImage());
         }
 
         //完全的WWW方式,Unity 帮助管理纹理缓存，并且效率貌似更高
         // TODO:persistantPath 用 read
         public override IEnumerator DoLoadAsync(System.Action finishCallback)
         {
-//            var imageBytes = File.ReadAllBytes(mFullPath);
+            var imageBytes = File.ReadAllBytes(mFullPath);
 
-//            Texture2D loadTexture2D = new Texture2D(256, 256, TextureFormat.RGB24,false);
-//            loadTexture2D.LoadImage(imageBytes);
+            Texture2D loadTexture2D = new Texture2D(256, 256, TextureFormat.RGB24,false);
+            loadTexture2D.LoadImage(imageBytes);
             
-//            if (RefCount <= 0)
+            if (RefCount <= 0)
+            {
+                OnResLoadFaild();
+                finishCallback();
+                yield break;
+            }
+
+//            WWW www = new WWW(mFullPath);
+
+//            mWWW = www;
+
+//            yield return www;
+
+//            mWWW = null;
+
+//            if (www.error != null)
 //            {
+//                Log.E(string.Format("Res:{0}, WWW Errors:{1}", mFullPath, www.error));
 //                OnResLoadFaild();
 //                finishCallback();
 //                yield break;
 //            }
 
-            WWW www = new WWW("file://" + mFullPath);
+//            if (!www.isDone)
+//            {
+//                Log.E("LocalImageRes WWW Not Done! Url:" + mFullPath);
+//                OnResLoadFaild();
+//                finishCallback();
 
-            mWWW = www;
+//                www.Dispose();
+//                www = null;
 
-            yield return www;
-
-            mWWW = null;
-
-            if (www.error != null)
-            {
-                Log.E(string.Format("Res:{0}, WWW Errors:{1}", mFullPath, www.error));
-                OnResLoadFaild();
-                finishCallback();
-                yield break;
-            }
-
-            if (!www.isDone)
-            {
-                Log.E("LocalImageRes WWW Not Done! Url:" + mFullPath);
-                OnResLoadFaild();
-                finishCallback();
-
-                www.Dispose();
-                www = null;
-
-                yield break;
-            }
+//                yield break;
+//            }
 
             if (RefCount <= 0)
             {
                 OnResLoadFaild();
                 finishCallback();
 
-                www.Dispose();
-                www = null;
+//                www.Dispose();
+//                www = null;
                 yield break;
             }
 
-            mAsset = www.texture;
+            //TimeDebugger dt = new TimeDebugger("Tex");
+            //dt.Begin("LoadingTask");
+            //这里是同步的操作
+//            mAsset = www.texture;
+            mAsset = loadTexture2D;
+            //dt.End();
 
-            www.Dispose();
-            www = null;
+//            www.Dispose();
+//            www = null;
 
+            //dt.Dump(-1);
 
             State = ResState.Ready;
 

@@ -1,5 +1,5 @@
 ﻿/****************************************************************************
- * Copyright (c) 2018.3 ~ 2019.1 liangxie
+ * Copyright (c) 2018.3 liangxie
  * 
  * http://liangxiegame.com
  * https://github.com/liangxiegame/QFramework
@@ -27,25 +27,12 @@
 using System;
 using UnityEngine;
 using System.Collections.Generic;
-using QF.Extensions;
+using System.Text;
 
-namespace QF.Res
+namespace QFramework
 {
     public class AssetDataGroup
     {
-        public IEnumerable<AssetData> AssetDatas
-        {
-            get { return mAssetDataMap.Values; }
-        }
-
-        public IEnumerable<ABUnit> AssetBundleDatas
-        {
-            get
-            {
-                return mABUnitArray;
-            }
-        }
-
         /// <summary>
         /// 代表依赖关系的类
         /// </summary>
@@ -129,7 +116,7 @@ namespace QF.Res
         public AssetDataGroup(SerializeData data)
         {
             m_Key = data.key;
-            SetSerializeData(data);
+            SetSerizlizeData(data);
         }
 
         public void Reset()
@@ -157,9 +144,7 @@ namespace QF.Res
                 mABUnitArray = new List<ABUnit>();
             }
 
-            var resSearchRule = ResSearchRule.Allocate(name);
-            AssetData config = GetAssetData(resSearchRule);
-            resSearchRule.Recycle2Cache();
+            AssetData config = GetAssetData(name);
 
             if (config != null)
             {
@@ -200,11 +185,7 @@ namespace QF.Res
 
         public ABUnit GetABUnit(string assetName)
         {
-            var resSearchRule = ResSearchRule.Allocate(assetName);
-            
-            AssetData data = GetAssetData(resSearchRule);
-            
-            resSearchRule.Recycle2Cache();
+            AssetData data = GetAssetData(assetName);
 
             if (data == null)
             {
@@ -234,22 +215,42 @@ namespace QF.Res
 
             return true;
         }
-
-        public AssetData GetAssetData(ResSearchRule resSearchRule)
+        
+        public AssetData GetAssetData(string assetName)
         {
+            if (mAssetDataMap == null)
+            {
+                return null;
+            }
+
+            string key = assetName.ToLower() ;
+
             AssetData result = null;
-
-            if (resSearchRule.OwnerBundle.IsNotNull() && mUUID4AssetData.IsNotNull())
+            if (mAssetDataMap.TryGetValue(key, out result))
             {
-                return mUUID4AssetData.TryGetValue(resSearchRule.DictionaryKey, out result) ? result : null;
+                return result;
             }
 
-            if (resSearchRule.OwnerBundle.IsNull() && mAssetDataMap.IsNotNull())
+            return null;
+        }
+        
+
+        public AssetData GetAssetData(string assetName,string ownerBundle)
+        {
+            if (mUUID4AssetData == null)
             {
-                return mAssetDataMap.TryGetValue(resSearchRule.DictionaryKey, out result) ? result : null;
+                return null;
             }
 
-            return result;
+            string uuid = (ownerBundle + assetName).ToLower();
+
+            AssetData result = null;
+            if (mUUID4AssetData.TryGetValue(uuid, out result))
+            {
+                return result;
+            }
+
+            return null;
         }
 
         public bool AddAssetData(AssetData data)
@@ -268,9 +269,7 @@ namespace QF.Res
 
             if (mAssetDataMap.ContainsKey(key))
             {
-                var resSearchRule = ResSearchRule.Allocate(data.AssetName);
-                var old = GetAssetData(resSearchRule);
-                resSearchRule.Recycle2Cache();
+                AssetData old = GetAssetData(data.AssetName, null);
 
                 try
                 {
@@ -289,9 +288,7 @@ namespace QF.Res
 
             if (mUUID4AssetData.ContainsKey(data.UUID))
             {
-                var resSearchRule = ResSearchRule.Allocate(data.AssetName, data.OwnerBundleName);
-                AssetData old = GetAssetData(resSearchRule);
-                resSearchRule.Recycle2Cache();
+                AssetData old = GetAssetData(data.AssetName, data.OwnerBundleName);
 
                 Log.E("Already Add AssetData :{0} \n OldAB:{1}      NewAB:{2}", data.UUID,
                     mABUnitArray[old.AssetBundleIndex].abName, mABUnitArray[data.AssetBundleIndex].abName);
@@ -325,7 +322,7 @@ namespace QF.Res
         }
 
 
-        private void SetSerializeData(SerializeData data)
+        private void SetSerizlizeData(SerializeData data)
         {
             if (data == null)
             {
